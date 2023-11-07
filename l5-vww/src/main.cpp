@@ -130,9 +130,12 @@ void loop() {
     res = ESP_FAIL;
   } else {
     if(fb->format != PIXFORMAT_JPEG){
-
+      uint64_t start, dur_prep, dur_infer;
 #if DEBUG_TFLITE==0
+      // Use camera image
+      start = esp_timer_get_time();
       GetImage(fb, g_nn->getInput());
+      dur_prep = esp_timer_get_time() - start;
 #else
       // Use a static image for debugging
       memcpy(g_nn->getInput()->data.f, img_data, sizeof(img_data));
@@ -140,10 +143,10 @@ void loop() {
         g_nn->getInput()->data.f[0], g_nn->getInput()->data.f[1], g_nn->getInput()->data.f[2]);
 #endif
       // measure timing 
-      uint64_t start = esp_timer_get_time();
+      start = esp_timer_get_time();
       g_nn->predict();
-      uint64_t end = esp_timer_get_time();
-      Serial.printf("Inference took %llu ms\n", (end - start)/1000);
+      dur_infer = esp_timer_get_time() - start;
+      Serial.printf("Preprocessing: %llu ms, Inference: %llu ms\n", dur_prep/1000, dur_infer/1000);
 
       float prob = g_nn->getOutput()->data.f[0];
       Serial.printf("output: %.3f --> ", prob);
