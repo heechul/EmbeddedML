@@ -14,8 +14,9 @@
 
 #define INPUT_W 96
 #define INPUT_H 96
-#define DEBUG_TFLITE 0
 #define LED_BUILT_IN 21
+
+#define DEBUG_TFLITE 0
 
 #if DEBUG_TFLITE==1
 #include "img.cpp"  // Use a static image for debugging
