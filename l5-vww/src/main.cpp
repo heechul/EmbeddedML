@@ -1,16 +1,4 @@
-/*********
-  Based on Rui Santos ESP32 CAM Project:
-  https://RandomNerdTutorials.com/esp32-cam-video-streaming-web-server-camera-home-assistant/
-  
-  Permission is hereby granted, free of charge, to any person obtaining a copy
-  of this software and associated documentation files.
-
-  The above copyright notice and this permission notice shall be included in all
-  copies or substantial portions of the Software.
-
-  Adapted to XIAO ESP32S3 Sense by MJRovai 02May23
-  
-*********/
+// VWW - Face Mask Detection
 
 #include "esp_camera.h"
 #include "esp_timer.h"
@@ -26,8 +14,12 @@
 
 #define INPUT_W 96
 #define INPUT_H 96
-#define USE_INT8 0
-#define DEBUG_TFLITE 1
+#define DEBUG_TFLITE 0
+#define LED_BUILT_IN 21
+
+#if DEBUG_TFLITE==1
+#include "img.cpp"  // Use a static image for debugging
+#endif
 
 NeuralNetwork *g_nn;
 
@@ -58,17 +50,12 @@ int GetImage(camera_fb_t * fb, TfLiteTensor* input)
             // MicroPrintf("input[%d]: fb->buf[%d]=%d\n", post, getPos, fb->buf[getPos]);
             uint16_t color = ((uint16_t *)fb->buf)[getPos];
             uint32_t rgb = rgb565torgb888(color);
-#if USE_INT8==1
-            int8_t *image_data = input->data.int8;
-            image_data[post * 3 + 0] = ((rgb >> 16) & 0xFF) - 128;  // R
-            image_data[post * 3 + 1] = ((rgb >> 8) & 0xFF) - 128;   // G
-            image_data[post * 3 + 2] = (rgb & 0xFF) - 128;          // B
-#else
+
             float *image_data = input->data.f;
-            image_data[post * 3 + 0] = ((rgb >> 16) & 0xFF);
-            image_data[post * 3 + 1] = ((rgb >> 8) & 0xFF);
-            image_data[post * 3 + 2] = (rgb & 0xFF);
-#endif /* USE_INT8*/
+
+            image_data[post * 3 + 0] = ((rgb >> 16) & 0xFF);  // R
+            image_data[post * 3 + 1] = ((rgb >> 8) & 0xFF);   // G
+            image_data[post * 3 + 2] = (rgb & 0xFF);          // B
             post++;
         }
     }
@@ -110,6 +97,9 @@ void setup() {
   config.jpeg_quality = 12;
   config.fb_count = 1;
   
+  // Pin for LED
+  pinMode(LED_BUILT_IN, OUTPUT); // Set the pin as output
+
   // Camera init
   esp_err_t err = esp_camera_init(&config);
   if (err != ESP_OK) {
@@ -127,7 +117,7 @@ void setup() {
 
 }
 
-#include "img.cpp"
+
 void loop() {
 
   camera_fb_t * fb = NULL;
@@ -143,6 +133,7 @@ void loop() {
 #if DEBUG_TFLITE==0
       GetImage(fb, g_nn->getInput());
 #else
+      // Use a static image for debugging
       memcpy(g_nn->getInput()->data.f, img_data, sizeof(img_data));
       printf("input: %.3f %.3f %.3f...\n", 
         g_nn->getInput()->data.f[0], g_nn->getInput()->data.f[1], g_nn->getInput()->data.f[2]);
@@ -157,8 +148,11 @@ void loop() {
       Serial.printf("output: %.3f --> ", prob);
       if (prob < 0.5) {
         Serial.println("with_mask");
+        // show the inference result on LED
+        digitalWrite(LED_BUILT_IN, LOW); //Turn on
       } else {
         Serial.println("without_mask");
+        digitalWrite(LED_BUILT_IN, HIGH); //Turn off
       }
       esp_camera_fb_return(fb);
       fb = NULL;
