@@ -164,6 +164,8 @@ void setup() {
   // Wi-Fi connection
   #if SETUP_AP==1
     WiFi.softAP(ssid, password);
+    Serial.print("Camera Stream Ready! Go to: http://");
+    Serial.print(WiFi.softAPIP());
   #else
     WiFi.begin(ssid, password);
     while (WiFi.status() != WL_CONNECTED) {
@@ -172,10 +174,9 @@ void setup() {
     }
     Serial.println("");
     Serial.println("WiFi connected");
+    Serial.print("Camera Stream Ready! Go to: http://");
+    Serial.print(WiFi.localIP());
   #endif
-
-  Serial.print("Camera Stream Ready! Go to: http://");
-  Serial.print(WiFi.localIP());
   
   // Start streaming web server
   startCameraServer();

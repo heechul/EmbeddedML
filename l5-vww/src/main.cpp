@@ -13,106 +13,66 @@
 *********/
 
 #include "esp_camera.h"
-#include <WiFi.h>
 #include "esp_timer.h"
 #include "img_converters.h"
 #include "Arduino.h"
 #include "fb_gfx.h"
 #include "soc/soc.h" //disable brownout problems
 #include "soc/rtc_cntl_reg.h"  //disable brownout problems
-#include "esp_http_server.h"
-
-//Replace with your network credentials
-#define SETUP_AP 1 // 1=AP, 0=STA
-
-const char* ssid = "ESP32_YOUR_KUID";
-const char* password = "123456789";
-
-#define PART_BOUNDARY "123456789000000000000987654321"
+#include "NeuralNetwork.h"
 
 #define CAMERA_MODEL_XIAO_ESP32S3 // Has PSRAM
 #include "camera_pins.h"
 
-static const char* _STREAM_CONTENT_TYPE = "multipart/x-mixed-replace;boundary=" PART_BOUNDARY;
-static const char* _STREAM_BOUNDARY = "\r\n--" PART_BOUNDARY "\r\n";
-static const char* _STREAM_PART = "Content-Type: image/jpeg\r\nContent-Length: %u\r\n\r\n";
+#define INPUT_W 96
+#define INPUT_H 96
+#define USE_INT8 0
+#define DEBUG_TFLITE 1
 
-httpd_handle_t stream_httpd = NULL;
+NeuralNetwork *g_nn;
 
-static esp_err_t stream_handler(httpd_req_t *req){
-  camera_fb_t * fb = NULL;
-  esp_err_t res = ESP_OK;
-  size_t _jpg_buf_len = 0;
-  uint8_t * _jpg_buf = NULL;
-  char * part_buf[64];
-
-  res = httpd_resp_set_type(req, _STREAM_CONTENT_TYPE);
-  if(res != ESP_OK){
-    return res;
-  }
-
-  while(true){
-    fb = esp_camera_fb_get();
-    if (!fb) {
-      Serial.println("Camera capture failed");
-      res = ESP_FAIL;
-    } else {
-      if(fb->width > 400){
-        if(fb->format != PIXFORMAT_JPEG){
-          bool jpeg_converted = frame2jpg(fb, 80, &_jpg_buf, &_jpg_buf_len);
-          esp_camera_fb_return(fb);
-          fb = NULL;
-          if(!jpeg_converted){
-            Serial.println("JPEG compression failed");
-            res = ESP_FAIL;
-          }
-        } else {
-          _jpg_buf_len = fb->len;
-          _jpg_buf = fb->buf;
-        }
-      }
-    }
-    if(res == ESP_OK){
-      size_t hlen = snprintf((char *)part_buf, 64, _STREAM_PART, _jpg_buf_len);
-      res = httpd_resp_send_chunk(req, (const char *)part_buf, hlen);
-    }
-    if(res == ESP_OK){
-      res = httpd_resp_send_chunk(req, (const char *)_jpg_buf, _jpg_buf_len);
-    }
-    if(res == ESP_OK){
-      res = httpd_resp_send_chunk(req, _STREAM_BOUNDARY, strlen(_STREAM_BOUNDARY));
-    }
-    if(fb){
-      esp_camera_fb_return(fb);
-      fb = NULL;
-      _jpg_buf = NULL;
-    } else if(_jpg_buf){
-      free(_jpg_buf);
-      _jpg_buf = NULL;
-    }
-    if(res != ESP_OK){
-      break;
-    }
-    //Serial.printf("MJPG: %uB\n",(uint32_t)(_jpg_buf_len));
-  }
-  return res;
+uint32_t rgb565torgb888(uint16_t color)
+{
+    uint32_t r, g, b;
+    r = g = b = 0; 
+    r = (color >> 11) & 0x1F;
+    g = (color >> 5) & 0x3F;
+    b = color & 0x1F;
+    r = (r << 3) | (r >> 2);
+    g = (g << 2) | (g >> 4);
+    b = (b << 3) | (b >> 2);
+    return (r << 16) | (g << 8) | b;
 }
 
-void startCameraServer(){
-  httpd_config_t config = HTTPD_DEFAULT_CONFIG();
-  config.server_port = 80;
+int GetImage(camera_fb_t * fb, TfLiteTensor* input) 
+{
+    assert(fb->format == PIXFORMAT_RGB565);
 
-  httpd_uri_t index_uri = {
-    .uri       = "/",
-    .method    = HTTP_GET,
-    .handler   = stream_handler,
-    .user_ctx  = NULL
-  };
-  
-  //Serial.printf("Starting web server on port: '%d'\n", config.server_port);
-  if (httpd_start(&stream_httpd, &config) == ESP_OK) {
-    httpd_register_uri_handler(stream_httpd, &index_uri);
-  }
+    // Trimming Image
+    int post = 0;
+    int startx = (fb->width - INPUT_W) / 2;
+    int starty = (fb->height - INPUT_H);
+    for (int y = 0; y < INPUT_H; y++) {
+        for (int x = 0; x < INPUT_W; x++) {
+            int getPos = (starty + y) * fb->width + startx + x;
+            // MicroPrintf("input[%d]: fb->buf[%d]=%d\n", post, getPos, fb->buf[getPos]);
+            uint16_t color = ((uint16_t *)fb->buf)[getPos];
+            uint32_t rgb = rgb565torgb888(color);
+#if USE_INT8==1
+            int8_t *image_data = input->data.int8;
+            image_data[post * 3 + 0] = ((rgb >> 16) & 0xFF) - 128;  // R
+            image_data[post * 3 + 1] = ((rgb >> 8) & 0xFF) - 128;   // G
+            image_data[post * 3 + 2] = (rgb & 0xFF) - 128;          // B
+#else
+            float *image_data = input->data.f;
+            image_data[post * 3 + 0] = ((rgb >> 16) & 0xFF);
+            image_data[post * 3 + 1] = ((rgb >> 8) & 0xFF);
+            image_data[post * 3 + 2] = (rgb & 0xFF);
+#endif /* USE_INT8*/
+            post++;
+        }
+    }
+    return 0;
 }
 
 void setup() {
@@ -143,8 +103,8 @@ void setup() {
   config.pin_pwdn = PWDN_GPIO_NUM;
   config.pin_reset = RESET_GPIO_NUM;
   config.xclk_freq_hz = 20000000;
-  config.frame_size = FRAMESIZE_VGA;
-  config.pixel_format = PIXFORMAT_JPEG; // for streaming
+  config.frame_size = FRAMESIZE_96X96;
+  config.pixel_format = PIXFORMAT_RGB565; // PIXFORMAT_JPEG; // for streaming
   config.grab_mode = CAMERA_GRAB_WHEN_EMPTY;
   config.fb_location = CAMERA_FB_IN_PSRAM;
   config.jpeg_quality = 12;
@@ -161,26 +121,47 @@ void setup() {
   Serial.printf("frame_size=%d\n", config.frame_size);
   Serial.printf("pixel_format=%d\n", config.pixel_format);
 
-  // Wi-Fi connection
-  #if SETUP_AP==1
-    WiFi.softAP(ssid, password);
-  #else
-    WiFi.begin(ssid, password);
-    while (WiFi.status() != WL_CONNECTED) {
-      delay(500);
-      Serial.print(".");
-    }
-    Serial.println("");
-    Serial.println("WiFi connected");
-  #endif
+  // Initialize neural network
+  Serial.println("Initializing neural network...");
+  g_nn = new NeuralNetwork();
 
-  Serial.print("Camera Stream Ready! Go to: http://");
-  Serial.print(WiFi.localIP());
-  
-  // Start streaming web server
-  startCameraServer();
 }
 
+#include "img.cpp"
 void loop() {
-  delay(1);
+
+  camera_fb_t * fb = NULL;
+  esp_err_t res = ESP_OK;
+
+  fb = esp_camera_fb_get();
+  if (!fb) {
+    Serial.println("Camera capture failed");
+    res = ESP_FAIL;
+  } else {
+    if(fb->format != PIXFORMAT_JPEG){
+
+#if DEBUG_TFLITE==0
+      GetImage(fb, g_nn->getInput());
+#else
+      memcpy(g_nn->getInput()->data.f, img_data, sizeof(img_data));
+      printf("input: %.3f %.3f %.3f...\n", 
+        g_nn->getInput()->data.f[0], g_nn->getInput()->data.f[1], g_nn->getInput()->data.f[2]);
+#endif
+      // measure timing 
+      uint64_t start = esp_timer_get_time();
+      g_nn->predict();
+      uint64_t end = esp_timer_get_time();
+      Serial.printf("Inference took %llu ms\n", (end - start)/1000);
+
+      float prob = g_nn->getOutput()->data.f[0];
+      Serial.printf("output: %.3f --> ", prob);
+      if (prob < 0.5) {
+        Serial.println("with_mask");
+      } else {
+        Serial.println("without_mask");
+      }
+      esp_camera_fb_return(fb);
+      fb = NULL;
+    }
+  }
 }

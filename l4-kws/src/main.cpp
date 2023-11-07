@@ -120,6 +120,7 @@ void loop()
     signal.get_data = &microphone_audio_signal_get_data;
     ei_impulse_result_t result = { 0 };
 
+
     EI_IMPULSE_ERROR r = run_classifier(&signal, &result, debug_nn);
     if (r != EI_IMPULSE_OK) {
         ei_printf("ERR: Failed to run classifier (%d)\n", r);

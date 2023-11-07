@@ -205,6 +205,7 @@ extern "C" EI_IMPULSE_ERROR process_impulse(const ei_impulse_t *impulse,
     // Shortcut for quantized image models
     ei_learning_block_t block = impulse->learning_blocks[0];
     if (can_run_classifier_image_quantized(impulse, block) == EI_IMPULSE_OK) {
+        printf("Running classifier with image quantization...\n");
         return run_classifier_image_quantized(impulse, signal, result, debug);
     }
 #endif
