@@ -67,7 +67,7 @@ void setup() {
   WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); //disable brownout detector
  
   Serial.begin(115200);
-  while(!Serial); // When the serial monitor is turned on, the program starts to execute
+  // while(!Serial); // When the serial monitor is turned on, the program starts to execute
 
   Serial.setDebugOutput(false);
   
