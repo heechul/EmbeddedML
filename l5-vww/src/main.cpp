@@ -19,21 +19,23 @@
 #define DEBUG_TFLITE 0
 
 #if DEBUG_TFLITE==1
-#include "img.cpp"  // Use a static image for debugging
+#include "img.h"  // Use a static image for debugging
 #endif
 
 NeuralNetwork *g_nn;
 
 uint32_t rgb565torgb888(uint16_t color)
 {
+    uint8_t hb, lb;
     uint32_t r, g, b;
-    r = g = b = 0; 
-    r = (color >> 11) & 0x1F;
-    g = (color >> 5) & 0x3F;
-    b = color & 0x1F;
-    r = (r << 3) | (r >> 2);
-    g = (g << 2) | (g >> 4);
-    b = (b << 3) | (b >> 2);
+
+    lb = (color >> 8) & 0xFF;
+    hb = color & 0xFF;
+
+    r = (lb & 0x1F) << 3;
+    g = ((hb & 0x07) << 5) | ((lb & 0xE0) >> 3);
+    b = (hb & 0xF8);
+
     return (r << 16) | (g << 8) | b;
 }
 
