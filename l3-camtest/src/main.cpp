@@ -183,5 +183,6 @@ void setup() {
 }
 
 void loop() {
-  delay(1);
+  delay(1000);
+  Serial.print(".");
 }
