@@ -35,6 +35,7 @@
 
 NeuralNetwork *g_nn;
 
+// Convert RGB565 to RGB888
 uint32_t rgb565torgb888(uint16_t color)
 {
     uint8_t hb, lb;
@@ -50,6 +51,7 @@ uint32_t rgb565torgb888(uint16_t color)
     return (r << 16) | (g << 8) | b;
 }
 
+// Get image from camera frame buffer and convert it to the input tensor
 int GetImage(camera_fb_t * fb, TfLiteTensor* input) 
 {
     assert(fb->format == PIXFORMAT_RGB565);
@@ -138,7 +140,7 @@ void setup() {
 
 }
 
-
+// Main loop
 void loop() {
 
   camera_fb_t * fb = NULL;
