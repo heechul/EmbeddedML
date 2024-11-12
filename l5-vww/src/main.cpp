@@ -153,12 +153,12 @@ void loop() {
       float prob = g_nn->getOutput()->data.f[0];
       Serial.printf("output: %.3f --> ", prob);
       if (prob < 0.5) {
-        Serial.println("with_mask");
+        Serial.println("No person");
+        digitalWrite(LED_BUILT_IN, HIGH); //Turn off
+      } else {
+        Serial.println("Person");
         // show the inference result on LED
         digitalWrite(LED_BUILT_IN, LOW); //Turn on
-      } else {
-        Serial.println("without_mask");
-        digitalWrite(LED_BUILT_IN, HIGH); //Turn off
       }
       esp_camera_fb_return(fb);
       fb = NULL;
