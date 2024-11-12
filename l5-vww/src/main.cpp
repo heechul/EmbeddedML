@@ -1,4 +1,15 @@
-// VWW - Face Mask Detection
+// 
+// VWW - Person Detection
+// 
+// (C) 2023 Heechul Yun <heechul.yun@ku.edu>
+//   
+// Licensed under MIT License
+// 
+// Description:
+// This is a simple person detection program using ESP32-S3 camera.
+// The program uses a pre-trained neural network model to detect a person in the image.
+// The result is shown on the serial monitor and the built-in LED.
+//
 
 #include "esp_camera.h"
 #include "esp_timer.h"
@@ -69,8 +80,15 @@ void setup() {
   WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); //disable brownout detector
  
   Serial.begin(115200);
-  // while(!Serial); // When the serial monitor is turned on, the program starts to execute
 
+  while(!Serial) {
+    static int retries = 0;
+    delay(1000); // Wait for serial monitor to open
+    if (retries++ > 5) {
+      break;
+    }
+  } // When the serial monitor is turned on, the program starts to execute
+  
   Serial.setDebugOutput(false);
   
   camera_config_t config;
