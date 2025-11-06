@@ -38,44 +38,44 @@ NeuralNetwork *g_nn;
 // Convert RGB565 to RGB888
 uint32_t rgb565torgb888(uint16_t color)
 {
-    uint8_t hb, lb;
-    uint32_t r, g, b;
+  uint8_t hb, lb;
+  uint32_t r, g, b;
 
-    lb = (color >> 8) & 0xFF;
-    hb = color & 0xFF;
+  lb = (color >> 8) & 0xFF;
+  hb = color & 0xFF;
 
-    r = (lb & 0x1F) << 3;
-    g = ((hb & 0x07) << 5) | ((lb & 0xE0) >> 3);
-    b = (hb & 0xF8);
+  r = (lb & 0x1F) << 3;
+  g = ((hb & 0x07) << 5) | ((lb & 0xE0) >> 3);
+  b = (hb & 0xF8);
 
-    return (r << 16) | (g << 8) | b;
+  return (r << 16) | (g << 8) | b;
 }
 
 // Get image from camera frame buffer and convert it to the input tensor
 int GetImage(camera_fb_t * fb, TfLiteTensor* input) 
 {
-    assert(fb->format == PIXFORMAT_RGB565);
+  assert(fb->format == PIXFORMAT_RGB565);
 
-    // Trimming Image
-    int post = 0;
-    int startx = (fb->width - INPUT_W) / 2;
-    int starty = (fb->height - INPUT_H);
-    for (int y = 0; y < INPUT_H; y++) {
-        for (int x = 0; x < INPUT_W; x++) {
-            int getPos = (starty + y) * fb->width + startx + x;
-            // MicroPrintf("input[%d]: fb->buf[%d]=%d\n", post, getPos, fb->buf[getPos]);
-            uint16_t color = ((uint16_t *)fb->buf)[getPos];
-            uint32_t rgb = rgb565torgb888(color);
+  // Trimming Image
+  int post = 0;
+  int startx = (fb->width - INPUT_W) / 2;
+  int starty = (fb->height - INPUT_H);
+  for (int y = 0; y < INPUT_H; y++) {
+    for (int x = 0; x < INPUT_W; x++) {
+      int getPos = (starty + y) * fb->width + startx + x;
+      // MicroPrintf("input[%d]: fb->buf[%d]=%d\n", post, getPos, fb->buf[getPos]);
+      uint16_t color = ((uint16_t *)fb->buf)[getPos];
+      uint32_t rgb = rgb565torgb888(color);
 
-            float *image_data = input->data.f;
+      float *image_data = input->data.f;
 
-            image_data[post * 3 + 0] = ((rgb >> 16) & 0xFF);  // R
-            image_data[post * 3 + 1] = ((rgb >> 8) & 0xFF);   // G
-            image_data[post * 3 + 2] = (rgb & 0xFF);          // B
-            post++;
-        }
+      image_data[post * 3 + 0] = ((rgb >> 16) & 0xFF);  // R
+      image_data[post * 3 + 1] = ((rgb >> 8) & 0xFF);   // G
+      image_data[post * 3 + 2] = (rgb & 0xFF);          // B
+      post++;
     }
-    return 0;
+  }
+  return 0;
 }
 
 void setup() {
