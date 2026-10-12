@@ -123,12 +123,12 @@ void setup() {
   while(!Serial) {
     static int retries = 0;
     delay(1000); // Wait for serial monitor to open
-    if (retries++ > 5) {
+    if (retries++ > 10) {
       break;
     }
   } // When the serial monitor is turned on, the program starts to execute
   
-  Serial.setDebugOutput(false);
+  // Serial.setDebugOutput(false);
   
   camera_config_t config;
   config.ledc_channel = LEDC_CHANNEL_0;
