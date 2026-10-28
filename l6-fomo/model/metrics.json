@@ -1,0 +1,80 @@
+{
+  "dataset": "synthetic cubes v1",
+  "seeds": {
+    "train": 100,
+    "validation": 200,
+    "test": 300
+  },
+  "split_sizes": {
+    "train": 1200,
+    "validation": 240,
+    "test": 240
+  },
+  "threshold": 0.6,
+  "matching_radius_pixels": 8,
+  "epochs_run": 30,
+  "float32": {
+    "tp": 598,
+    "fp": 0,
+    "fn": 3,
+    "precision": 1.0,
+    "recall": 0.9950083194675541,
+    "f1": 0.9974979149291076,
+    "exact_class_counts": 0.9875,
+    "mean_absolute_class_count_error": 0.0125,
+    "per_class": {
+      "blue": {
+        "tp": 143,
+        "fp": 0,
+        "fn": 1
+      },
+      "green": {
+        "tp": 140,
+        "fp": 0,
+        "fn": 1
+      },
+      "red": {
+        "tp": 170,
+        "fp": 0,
+        "fn": 0
+      },
+      "yellow": {
+        "tp": 145,
+        "fp": 0,
+        "fn": 1
+      }
+    }
+  },
+  "int8": {
+    "tp": 597,
+    "fp": 0,
+    "fn": 4,
+    "precision": 1.0,
+    "recall": 0.9933444259567388,
+    "f1": 0.996661101836394,
+    "exact_class_counts": 0.9833333333333333,
+    "mean_absolute_class_count_error": 0.016666666666666666,
+    "per_class": {
+      "blue": {
+        "tp": 143,
+        "fp": 0,
+        "fn": 1
+      },
+      "green": {
+        "tp": 140,
+        "fp": 0,
+        "fn": 1
+      },
+      "red": {
+        "tp": 169,
+        "fp": 0,
+        "fn": 1
+      },
+      "yellow": {
+        "tp": 145,
+        "fp": 0,
+        "fn": 1
+      }
+    }
+  }
+}
