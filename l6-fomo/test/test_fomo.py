@@ -117,6 +117,13 @@ class FomoTests(unittest.TestCase):
 
     def test_exported_tflite_and_static_fixture(self):
         import tensorflow as tf
+        model = lab.build_model(tf)
+        self.assertEqual(model.get_layer(lab.BACKBONE_CUT_POINT).output_shape,
+                         (None, 12, 12, 96))
+        self.assertEqual(model.output_shape, (None, 12, 12, 5))
+        self.assertTrue(any(isinstance(layer, tf.keras.layers.DepthwiseConv2D)
+                            for layer in model.layers))
+        self.assertNotIn('block_6_depthwise', [layer.name for layer in model.layers])
         model_bytes = (ROOT / 'model/fomo-int8.tflite').read_bytes()
         source = (ROOT / 'src/model.cc').read_text()
         self.assertEqual(bytes(int(v, 16) for v in re.findall(r'0x([0-9a-f]{2})', source)), model_bytes)
@@ -130,7 +137,7 @@ class FomoTests(unittest.TestCase):
         check.allocate_tensors()
         self.assertTrue(all(t['dtype'] != np.float32 for t in check.get_tensor_details()))
         ops = {op['op_name'] for op in check._get_ops_details()} - {'DELEGATE'}
-        self.assertEqual(ops, {'CONV_2D', 'SOFTMAX'})
+        self.assertEqual(ops, {'CONV_2D', 'DEPTHWISE_CONV_2D', 'ADD', 'SOFTMAX'})
         with np.load(ROOT / 'model/static-parity.npz') as archive:
             fixture = {key: archive[key] for key in archive.files}
         np.testing.assert_array_equal(fixture['input'], lab.quantize_input(image, inp))

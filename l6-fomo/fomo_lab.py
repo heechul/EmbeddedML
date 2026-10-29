@@ -10,6 +10,8 @@ GRID_W = GRID_H = 12
 CLASS_NAMES = ('background', 'blue', 'green', 'red', 'yellow')
 COLORS = np.array([(40, 90, 220), (45, 190, 65), (220, 45, 40), (230, 205, 35)])
 THRESHOLD = 0.60
+BACKBONE_ALPHA = 0.35
+BACKBONE_CUT_POINT = 'block_6_expand_relu'
 
 
 def rgb565_roundtrip(rgb):
@@ -81,17 +83,24 @@ def centroid_targets(annotations):
 
 
 def build_model(tf):
-    """Small FOMO-style backbone trained from scratch; not the EI SDK model."""
+    """EI's FOMO trunk/head architecture, with randomly initialized weights.
+
+    Keep the stride-8 expansion before block 6's depthwise downsampling.
+    Training/decoder code is local; this does not load EI's pretrained checkpoint.
+    """
     layers = tf.keras.layers
     inputs = layers.Input((INPUT_H, INPUT_W, 3), name='rgb_0_to_1')
-    x = inputs
-    for channels in (8, 16, 24):
-        x = layers.Conv2D(channels, 3, strides=2, padding='same', activation='relu')(x)
-    x = layers.Conv2D(32, 3, padding='same', activation='relu')(x)
+    mobilenet = tf.keras.applications.MobileNetV2(
+        input_tensor=inputs, alpha=BACKBONE_ALPHA, include_top=False, weights=None)
+    # Faster moving-statistic adaptation for this small, from-scratch dataset.
+    for layer in mobilenet.layers:
+        if isinstance(layer, layers.BatchNormalization):
+            layer.momentum = 0.9
+    x = mobilenet.get_layer(BACKBONE_CUT_POINT).output
     x = layers.Conv2D(32, 1, activation='relu', name='head')(x)
     logits = layers.Conv2D(len(CLASS_NAMES), 1, name='logits')(x)
     outputs = layers.Softmax(axis=-1, name='cell_probabilities')(logits)
-    return tf.keras.Model(inputs, outputs, name='fomo_cubes')
+    return tf.keras.Model(inputs, outputs, name='fomo_mobilenetv2_cubes')
 
 
 def decode_heatmap(probabilities, threshold=None):

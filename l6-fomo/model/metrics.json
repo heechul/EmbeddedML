@@ -1,4 +1,22 @@
 {
+  "architecture": {
+    "backbone": "MobileNetV2",
+    "alpha": 0.35,
+    "cut_point": "block_6_expand_relu",
+    "weights": "random",
+    "batch_norm_momentum": 0.9,
+    "parameters": 20853,
+    "tflite_operators": [
+      "ADD",
+      "CONV_2D",
+      "DEPTHWISE_CONV_2D",
+      "SOFTMAX"
+    ]
+  },
+  "model_bytes": {
+    "float32": 84564,
+    "int8": 56328
+  },
   "dataset": "synthetic cubes v1",
   "seeds": {
     "train": 100,
@@ -12,26 +30,26 @@
   },
   "threshold": 0.6,
   "matching_radius_pixels": 8,
-  "epochs_run": 30,
+  "epochs_run": 35,
   "float32": {
-    "tp": 598,
+    "tp": 601,
     "fp": 0,
-    "fn": 3,
+    "fn": 0,
     "precision": 1.0,
-    "recall": 0.9950083194675541,
-    "f1": 0.9974979149291076,
-    "exact_class_counts": 0.9875,
-    "mean_absolute_class_count_error": 0.0125,
+    "recall": 1.0,
+    "f1": 1.0,
+    "exact_class_counts": 1.0,
+    "mean_absolute_class_count_error": 0.0,
     "per_class": {
       "blue": {
-        "tp": 143,
+        "tp": 144,
         "fp": 0,
-        "fn": 1
+        "fn": 0
       },
       "green": {
-        "tp": 140,
+        "tp": 141,
         "fp": 0,
-        "fn": 1
+        "fn": 0
       },
       "red": {
         "tp": 170,
@@ -39,41 +57,41 @@
         "fn": 0
       },
       "yellow": {
-        "tp": 145,
+        "tp": 146,
         "fp": 0,
-        "fn": 1
+        "fn": 0
       }
     }
   },
   "int8": {
-    "tp": 597,
-    "fp": 0,
-    "fn": 4,
-    "precision": 1.0,
-    "recall": 0.9933444259567388,
-    "f1": 0.996661101836394,
-    "exact_class_counts": 0.9833333333333333,
-    "mean_absolute_class_count_error": 0.016666666666666666,
+    "tp": 601,
+    "fp": 1,
+    "fn": 0,
+    "precision": 0.9983388704318937,
+    "recall": 1.0,
+    "f1": 0.9991687448046551,
+    "exact_class_counts": 0.9958333333333333,
+    "mean_absolute_class_count_error": 0.004166666666666667,
     "per_class": {
       "blue": {
-        "tp": 143,
+        "tp": 144,
         "fp": 0,
-        "fn": 1
+        "fn": 0
       },
       "green": {
-        "tp": 140,
+        "tp": 141,
         "fp": 0,
-        "fn": 1
+        "fn": 0
       },
       "red": {
-        "tp": 169,
+        "tp": 170,
         "fp": 0,
-        "fn": 1
+        "fn": 0
       },
       "yellow": {
-        "tp": 145,
-        "fp": 0,
-        "fn": 1
+        "tp": 146,
+        "fp": 1,
+        "fn": 0
       }
     }
   }
